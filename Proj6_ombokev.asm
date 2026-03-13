@@ -15,13 +15,13 @@ INCLUDE Irvine32.inc
 ; --------------------------------------------------------
 ; Name: mGetString
 ;
-;  Prompt user to enter string and store the users input.
+; Prompt user to enter string and store the users input.
 ;
-; Preconditions: strOffset is valid addresses to a string,
+; Preconditions: string is valid addresses to a string,
 ; strSize is a unsigned integer, and output is a valid memory location.
 ; 
 ; Receives:
-; strOffset		= string address
+; string		= string address
 ; strSize		= max size of input string
 ; input			= offset of input string
 ; strLen		= actual length of input string
@@ -30,14 +30,15 @@ INCLUDE Irvine32.inc
 ; input			= offset to store user's input
 ; strLen		= the number of bytes read from user input string
 ; --------------------------------------------------------
-mGetString		MACRO	strOffset, strSize, input, strLen
+mGetString		MACRO	string, strSize, input, strLen
 
 	PUSH	EDX
 	PUSH	ECX
 	PUSH	EAX
+	PUSH	EBX
 
 	; Display prompt message.
-	MOV		EDX, OFFSET strOffset
+	MOV		EDX, OFFSET string
 	CALL	WriteString
 
 	; Get users input
@@ -45,8 +46,10 @@ mGetString		MACRO	strOffset, strSize, input, strLen
 	MOV		ECX, strSize
 	CALL	ReadString
 	CALL	CrLf
-	MOV		strLen, EAX			; Store length of input string in memory.
+	MOV		EBX, OFFSET strLen
+	MOV		[EBX], EAX			; Store length of input string in memory.
 
+	POP		EBX
 	POP		EAX
 	POP		ECX
 	POP		EDX
@@ -55,7 +58,7 @@ ENDM
 ; --------------------------------------------------------
 ; Name: mDisplayString
 ;
-;  Print a string which is stored in a specific memory location.
+; Print a string which is stored in a specific memory location.
 ;
 ; Preconditions: strOff contain a valid memory address of a string.
 ; 
@@ -76,7 +79,7 @@ ENDM
 ; --------------------------------------------------------
 ; Name: mDisplayChar
 ;
-;  Print an ASCII-formatted character that is provided as an 
+; Print an ASCII-formatted character that is provided as an 
 ; immediate or a constant.
 ;
 ; Preconditions: char is an immediate or constant defined value.
@@ -128,6 +131,41 @@ main PROC
 	Invoke ExitProcess,0	; exit to operating system
 main ENDP
 
+; --------------------------------------------------------
+; Name: 
+;
+; 
+;
+; Preconditions: 
+;
+; Postconditions:
+; 
+; Receives:
+;
+; Returns:
+; --------------------------------------------------------
+parseTempsFromString PROC
+
+
+parseTempsFromString ENDP
+
+; --------------------------------------------------------
+; Name: 
+;
+; 
+;
+; Preconditions: 
+;
+; Postconditions:
+; 
+; Receives:
+;
+; Returns:
+; --------------------------------------------------------
+writeTempsReverse PROC
+
+
+writeTempsReverse ENDP
 
 
 END main
