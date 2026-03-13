@@ -73,8 +73,32 @@ mDisplayString	MACRO	stringOff
 	POP		EDX
 ENDM
 
+; --------------------------------------------------------
+; Name: mDisplayChar
+;
+;  Print an ASCII-formatted character that is provided as an 
+; immediate or a constant.
+;
+; Preconditions: char is an immediate or constant defined value.
+; 
+; Receives:
+; char = character to be displayed.
+;
+; Returns: None
+; --------------------------------------------------------
+mDisplayChar	MACRO	char
+	PUSH	EAX
+
+	MOV		AL, char
+	CALL	WriteChar
+
+	POP		EAX
+
+ENDM
+
 ; Constant Definitions.
 MAXSIZE	= 100
+DELIMITER = ','
 
 
 .data  
@@ -97,6 +121,9 @@ main PROC
 
 	; Prompt user and store user input.
 	mGetString		prompt, MAXSIZE, userInput, userStrLen	
+
+	; Test mDisplayChar
+	mDisplayChar	DELIMITER
 
 	Invoke ExitProcess,0	; exit to operating system
 main ENDP
