@@ -10,28 +10,46 @@ TITLE MASM Temperature Organizer   (Proj6_ombokev.asm)
 
 INCLUDE Irvine32.inc
 
-; (insert macro definitions here)
+; Macro definitions:
 
 ; --------------------------------------------------------
 ; Name: mGetString
 ;
 ;  Prompt user to enter string and store the users input.
 ;
-; Preconditions: promptOffset and userInputAddress are valid addresses.
+; Preconditions: strOffset is valid addresses to a string,
+; strSize is a unsigned integer, and output is a valid memory location.
 ; 
 ; Receives:
-; promptOffset	= prompt string address
-; userInp		= the user's input
-; count			= length of input string
-; bytesRead		= number of bytes read by macro
+; strOffset		= string address
+; strSize		= max size of input string
+; input			= offset of input string
+; strLen		= actual length of input string
 ;
 ; Returns: 
-; userInp		= users input
-; bytesRead		= the number of bytes read when reading the string.
+; input			= offset to store user's input
+; strLen		= the number of bytes read from user input string
 ; --------------------------------------------------------
-mGetString		MACRO	promptOffset, userInp, count, bytesRead
+mGetString		MACRO	strOffset, strSize, input, strLen
 
+	PUSH	EDX
+	PUSH	ECX
+	PUSH	EAX
 
+	; Display prompt message.
+	MOV		EDX, OFFSET strOffset
+	CALL	WriteString
+
+	; Get users input
+	MOV		EDX, OFFSET input
+	MOV		ECX, strSize
+	CALL	ReadString
+	CALL	CrLf
+	MOV		strLen, EAX			; Store length of input string in memory.
+
+	POP		EAX
+	POP		ECX
+	POP		EDX
 ENDM
 
 ; --------------------------------------------------------
@@ -55,7 +73,8 @@ mDisplayString	MACRO	stringOff
 	POP		EDX
 ENDM
 
-; (insert constant definitions here)
+; Constant Definitions.
+MAXSIZE	= 100
 
 
 .data  
@@ -64,7 +83,8 @@ intro		BYTE	"Welcome to the Temperature Organizer!",13,10,13,10,
 					"a series of temperature values. The file must be ASCII-formatted. ",
 					"The program will then reverse the ordering and print the corrected temperature ordering.",13,10,13,10,0
 prompt		BYTE	"Enter the name of the file to be read: ",0
-userInput	SDWORD	?
+userInput	BYTE	MAXSIZE DUP(?)	
+userStrLen	DWORD	?
 
 
 
@@ -73,44 +93,14 @@ userInput	SDWORD	?
 main PROC
   
 	; Introduce program to user.
-	mDisplayString		intro
+	mDisplayString	intro
+
+	; Prompt user and store user input.
+	mGetString		prompt, MAXSIZE, userInput, userStrLen	
 
 	Invoke ExitProcess,0	; exit to operating system
 main ENDP
 
 
-; --------------------------------------------------------
-; Name: introduction
-;
-; Introduce the program to the user and explain it's finctionality. 
-;
-; Precinditions: intro is a string.
-;
-; Postconditions: None
-;
-; Receives: intro
-; 
-; Returns: None
-; --------------------------------------------------------
-introduction PROC
-
-	PUSH	EBP
-	MOV		EBP, ESP
-	PUSH	EDX
-
-	; CHEAT SHEET
-	; [EBP + 8] = intro offset
-	; [EBP + 4] = return address
-
-	MOV		EDX, [EBP + 8]
-	CALL	WriteString
-	CALL	CrLf
-
-	POP		EDX
-	POP		EBP
-	RET		4
-
-introduction ENDP
-	
 
 END main
