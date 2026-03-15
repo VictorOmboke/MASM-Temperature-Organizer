@@ -102,16 +102,25 @@ ENDM
 ; Constant Definitions.
 MAXSIZE	= 100
 DELIMITER = ','
+TEMPS_PER_DAY = 24
+INVALID_HANDLE_VALUE = -1
+BUFFER_SIZE = 500
+
 
 
 .data  
-intro		BYTE	"Welcome to the Temperature Organizer!",13,10,13,10,
-					"This program will read a comma-delimited (',') file storing ", 
-					"a series of temperature values. The file must be ASCII-formatted. ",
-					"The program will then reverse the ordering and print the corrected temperature ordering.",13,10,13,10,0
-prompt		BYTE	"Enter the name of the file to be read: ",0
-userInput	BYTE	MAXSIZE DUP(?)	
-userStrLen	DWORD	?
+intro			BYTE	"Welcome to the Temperature Organizer!",13,10,13,10,
+						"This program will read a comma-delimited (',') file storing ", 
+						"a series of temperature values. The file must be ASCII-formatted. ",
+						"The program will then reverse the ordering and print the corrected temperature ordering.",13,10,13,10,0
+prompt			BYTE	"Enter the name of the file to be read: ",0
+userInput		BYTE	MAXSIZE DUP(?)	
+userStrLen		DWORD	?
+tempArray		SDWORD	TEMPS_PER_DAY DUP(?)
+fileBuffer		BYTE	BUFFER_SIZE DUP(?)
+fileHandle		DWORD	?
+bytesRead		DWORD	?
+
 
 
 
@@ -123,36 +132,157 @@ main PROC
 	mDisplayString	intro
 
 	; Prompt user and store user input.
-	mGetString		prompt, MAXSIZE, userInput, userStrLen	
+	mGetString	prompt, MAXSIZE, userInput, userStrLen	
 
 	; Test mDisplayChar
-	mDisplayChar	DELIMITER
+	mDisplayChar  DELIMITER
+
+	; Open file
+	MOV		EDX, OFFSET userInput
+	CALL	OpenInputFile
+	CMP		EAX, INVALID_HANDLE_VALUE
+	JE		_HandleInvalidFile
+	MOV		fileHandle, EAX		; Store file handle
+
+	; Read values from file
+	MOV		ECX, SIZEOF fileBuffer
+	MOV		EDX, OFFSET fileBuffer
+	CALL	ReadFromFile
+	MOV		bytesRead, EAX
+
+	; Close file
+	MOV		EAX, fileHandle
+	CALL	CloseFile
+	JMP		_Continue
+
+_HandleInvalidFile:
+	CALL	WriteWindowsMsg		; Displays error message for invalid file handle.
+	CALL	CrLf
+	JMP		_Exit
+
+_Continue:
+
+	; Read temps from user inputed file.
+	PUSH	bytesRead
+	PUSH	OFFSET fileBuffer	
+	PUSH	OFFSET tempArray
+	CALL	parseTempsFromString
+
+_Exit:
 
 	Invoke ExitProcess,0	; exit to operating system
 main ENDP
 
 ; --------------------------------------------------------
-; Name: 
+; Name: parseTempsFromString
 ;
+; Read string formatted integer values from a file. Convert values
+; from file into their numeric value representations. Store converted 
+; values in an array.
+;
+; Preconditions: file buffer is filled with ascii values and bytesRead > 0
+;
+; Postconditions: None
 ; 
+; Receives: tempArray offset, fileBuffer offset, bytesRead
 ;
-; Preconditions: 
-;
-; Postconditions:
-; 
-; Receives:
-;
-; Returns:
+; Returns: tempArray
 ; --------------------------------------------------------
 parseTempsFromString PROC
+	PUSH	EBP
+	MOV		EBP, ESP
+	PUSH	ESI
+	PUSH	EDI
+	PUSH	EDX
+	PUSH	ECX
+	PUSH	EBX
+	PUSH	EAX
 
+	; CHEAT SHEET
+	; [EBP + 16] = bytesRead
+	; [EBP + 12] = fileBuffer offset
+	; [EBP + 8] = tempArray offset
+	; [EBP + 4] = return address
+	
+	MOV		ESI, [EBP + 12]		; Read from file buffer.
+	MOV		EDI, [EBP + 8]		; Store temps in tempArray.
+
+	MOV		EDX, 0				; Track number of stored.
+	MOV		ECX, [EBP + 16]		; Loop bytesRead times	
+_ParseTempLoop:
+	LODSB
+	DEC		ECX					; Manually decrement ECX
+	JZ		_Exit				
+
+	CMP		AL, DELIMITER		; Check if current value is a delimiter character.
+	JE		_ParseTempLoop			
+
+	MOV		EBX, 0				; Track negative values (1=negative, 0=positive)
+	CMP		AL, '-'				
+	JNE		_IsDigit			; If current value is not a negative sign, convert it.
+	MOV		EBX, 1				
+	LODSB						; If current value is a negative sign, get next value.
+	DEC		ECX
+
+_IsDigit:
+	PUSH	EDX					; Preserve temp tracker
+	PUSH	EBX					; Preserve negative flag
+
+	MOV		EBX, 0				; Hold converted digit
+	MOV		EDX, 0				; Initialize Accumulator
+	
+_ConversionLoop:
+	SUB		AL, '0'				; (ASCII value - 48 = digit)
+	MOVZX	EBX, AL
+	MOV		EAX, EDX			; EAX = 0
+	IMUL	EAX, 10
+	ADD		EAX, EBX			; Add digit to total in EAX
+	MOV		EDX, EAX			; Store total in accumulator
+
+	LODSB
+	DEC		ECX	
+
+	; Check if next value is digit.
+	CMP		AL, '0'
+	JB		_DoneConverting
+	CMP		AL, '9'
+	JA		_DoneConverting
+	JMP		_ConversionLoop		; Next value is a digit.
+
+_DoneConverting:
+	POP		EBX					; Restore negation flag
+	CMP		EBX, 1				;Check if value is negative
+	JE		_NegateTemp
+	JMP		_StoreTemp
+
+_NegateTemp:
+	NEG		EDX
+
+_StoreTemp:
+	MOV		EAX, EDX
+	STOSD
+	POP		EDX					; Restore temp tracker
+	CMP		EDX, TEMPS_PER_DAY	; Check if we have all the temps we need.
+	JA		_Exit
+	INC		EDX					; Add temp to temp tracker.
+
+_Exit:
+	
+	POP		EAX
+	POP		EBX
+	POP		ECX
+	POP		EDX
+	POP		EDI
+	POP		ESI
+	POP		EBP
+	RET		12
 
 parseTempsFromString ENDP
 
 ; --------------------------------------------------------
-; Name: 
+; Name: writeTempsReverse
 ;
-; 
+; Take values from an array and print them in reverse order.
 ;
 ; Preconditions: 
 ;
