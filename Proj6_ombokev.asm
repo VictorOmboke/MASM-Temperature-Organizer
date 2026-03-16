@@ -106,8 +106,6 @@ TEMPS_PER_DAY = 24
 INVALID_HANDLE_VALUE = -1
 BUFFER_SIZE = 500
 
-
-
 .data  
 intro			BYTE	"Welcome to the Temperature Organizer!",13,10,13,10,
 						"This program will read a comma-delimited (',') file storing ", 
@@ -324,6 +322,7 @@ _RevLoop:
 	mDisplayChar DELIMITER
 	LOOP	_RevLoop
 	CLD							;Clear direction flag.
+	CALL	CrLf
 
 	POP		ECX
 	POP		EBX
