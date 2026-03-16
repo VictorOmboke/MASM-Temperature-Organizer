@@ -134,9 +134,6 @@ main PROC
 	; Prompt user and store user input.
 	mGetString	prompt, MAXSIZE, userInput, userStrLen	
 
-	; Test mDisplayChar
-	mDisplayChar  DELIMITER
-
 	; Open file
 	MOV		EDX, OFFSET userInput
 	CALL	OpenInputFile
@@ -167,6 +164,10 @@ _Continue:
 	PUSH	OFFSET fileBuffer	
 	PUSH	OFFSET tempArray
 	CALL	parseTempsFromString
+
+	; Reverse tempArray
+	PUSH	OFFSET tempArray
+	CALL	writeTempsReverse
 
 _Exit:
 
@@ -265,6 +266,7 @@ _StoreTemp:
 	CMP		EDX, TEMPS_PER_DAY	; Check if we have all the temps we need.
 	JA		_Exit
 	INC		EDX					; Add temp to temp tracker.
+	JMP		_ParseTempLoop
 
 _Exit:
 	
@@ -284,16 +286,51 @@ parseTempsFromString ENDP
 ;
 ; Take values from an array and print them in reverse order.
 ;
-; Preconditions: 
+; Preconditions: tempArray is filled with at least one temperature
 ;
-; Postconditions:
+; Postconditions: None.
 ; 
-; Receives:
+; Receives: tempArray offset
 ;
-; Returns:
+; Returns: None.
 ; --------------------------------------------------------
 writeTempsReverse PROC
+	PUSH	EBP
+	MOV		EBP, ESP
+	PUSH	ESI
+	PUSH	EAX
+	PUSH	EBX
+	PUSH	ECX
 
+	; CHEAT SHEET
+	; [EBP + 8] = tempArray offset
+	; [EBP + 4] = return address
+
+	MOV		ESI, [EBP + 8]		; Store address of tempArray
+
+	; Calculate address of last element.
+	MOV		EAX, TEMPS_PER_DAY 		
+	DEC		EAX
+	MOV		EBX, 4
+	MUL		EBX
+	ADD		ESI, EAX			; ESI = (TEMPS_PER_DAY - 1) * TYPE tempArray.
+
+	MOV		ECX, TEMPS_PER_DAY
+	
+_RevLoop:
+	STD							; Set direction flag to decrement pointer.
+	LODSD						; Store value in ESI into EAX.
+	CALL	WriteInt			
+	mDisplayChar DELIMITER
+	LOOP	_RevLoop
+	CLD							;Clear direction flag.
+
+	POP		ECX
+	POP		EBX
+	POP		EAX
+	POP		ESI
+	POP		EBP
+	RET		4
 
 writeTempsReverse ENDP
 
